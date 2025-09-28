@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forever Yours, Pookie</title>
       <script src="audio.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap');
         
@@ -392,15 +394,20 @@
             setTimeout(createFloatingHeart, i * 1000);
         }
 
+        // Prepare final message for typing
+        const finalP = document.querySelector('.final-message p');
+        const finalText = finalP.textContent;
+        finalP.textContent = ''; // Clear it to prepare for typing
+
         // Generate cards
         const gridContainer = document.getElementById('gridContainer');
         cards.forEach((card, index) => {
             const cardDiv = document.createElement('div');
             cardDiv.className = 'card';
-            
+
             const imageContainer = document.createElement('div');
             imageContainer.className = 'card-image';
-            
+
             const img = document.createElement('img');
             img.src = card.image;
             img.alt = "Love Message";
@@ -408,20 +415,85 @@
             img.style.height = "100%";
             img.style.objectFit = "cover";
             imageContainer.appendChild(img);
-            
+
             const messageDiv = document.createElement('div');
             messageDiv.className = 'card-message';
-            messageDiv.textContent = card.message;
-            
+            messageDiv.dataset.message = card.message;
+
             cardDiv.appendChild(imageContainer);
             cardDiv.appendChild(messageDiv);
             gridContainer.appendChild(cardDiv);
-            
+
             // Animate cards to appear
             setTimeout(() => {
                 cardDiv.classList.add('animate');
             }, 200 + index * 150);
         });
+
+        // Typing effect for messages
+        function typeWriter(element, text, speed = 50) {
+            return new Promise((resolve) => {
+                if (element.textContent.trim()) {
+                    resolve(); // Already typed
+                    return;
+                }
+                let i = 0;
+                element.textContent = '';
+                const cursor = document.createElement('span');
+                cursor.textContent = '|';
+                cursor.style.display = 'inline';
+                element.appendChild(cursor);
+
+                // Blink cursor
+                let blink = true;
+                const blinkInterval = setInterval(() => {
+                    cursor.style.opacity = blink ? '1' : '0';
+                    blink = !blink;
+                }, 500);
+
+                const timer = setInterval(() => {
+                    if (i < text.length) {
+                        element.insertBefore(document.createTextNode(text.charAt(i)), cursor);
+                        i++;
+                    } else {
+                        clearInterval(timer);
+                        clearInterval(blinkInterval);
+                        cursor.remove();
+                        resolve();
+                    }
+                }, speed);
+            });
+        }
+
+        // Start sequential typing on page load
+        setTimeout(() => {
+            typeMessagesSequentially();
+        }, 1000);
+
+        function typeMessagesSequentially() {
+            const messageDivs = document.querySelectorAll('.card-message');
+            let index = 0;
+
+            function typeNext() {
+                if (index < messageDivs.length) {
+                    const div = messageDivs[index];
+                    const text = div.dataset.message;
+                    const speed = 11000 / text.length; // 10 seconds total per message
+                    typeWriter(div, text, speed).then(() => {
+                        index++;
+                        setTimeout(typeNext, 7000); // 7 second lag between messages
+                    });
+                } else {
+                    // Type the final message
+                    const speed = 100000 / finalText.length; // 15 seconds total
+                    typeWriter(finalP, finalText, speed);
+                }
+            }
+
+            typeNext();
+        }
+
+        
 
         // Button functionality
         document.getElementById('nextButton').addEventListener('click', () => {
